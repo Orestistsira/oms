@@ -4,15 +4,14 @@ package orders;
 
 import "google/protobuf/timestamp.proto";
 
-message CreateOrderRequest {
-  string customer_id = 1;
-  repeated string items = 2;
-  double total = 3;
+message ItemWithQuantity {
+  string item_id = 1;
+  int32 quantity = 2;
 }
 
-message CreateOrderResponse {
-  string order_id = 1;
-  string status = 2;
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated ItemWithQuantity items = 2;
 }
 
 message GetOrderRequest {
@@ -20,16 +19,23 @@ message GetOrderRequest {
   string order_id = 2;
 }
 
+message Item {
+  string item_id = 1;
+  string name = 2;
+  int32 quantity = 3;
+  int32 price = 4;
+}
+
 message Order {
   string order_id = 1;
   string customer_id = 2;
-  repeated string items = 3;
-  double total = 4;
-  string status = 5;
+  repeated Item items = 3;
+  string status = 4;
+  string payment_link = 5;
   google.protobuf.Timestamp created_at = 6;
 }
 
 service Orders {
-  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc CreateOrder(CreateOrderRequest) returns (Order);
   rpc GetOrder(GetOrderRequest) returns (Order);
 }
