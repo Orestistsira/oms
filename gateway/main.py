@@ -8,7 +8,7 @@ from google.protobuf.json_format import MessageToDict
 
 app = FastAPI(title="Gateway")
 
-GRPC_TARGET = "localhost:50051"
+GRPC_TARGET = "orders:50051"
 
 # Reuse a single channel/stub
 _channel = None

@@ -1,0 +1,30 @@
+version: "3.8"
+services:
+  orders:
+    container_name: orders
+    build:
+      context: .
+      dockerfile: orders/Dockerfile
+    networks:
+      - microservices-network
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - RABBIT_URI=amqp://guest:guest@rabbitmq/
+    ports:
+      - "50051:50051"
+
+  gateway:
+    container_name: gateway
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    networks:
+      - microservices-network
+    environment:
+      - GRPC_TARGET=orders:50051
+    ports:
+      - "8000:8000"
+
+networks:
+  microservices-network:
+    driver: bridge
