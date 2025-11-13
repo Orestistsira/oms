@@ -8,8 +8,8 @@ services:
     networks:
       - microservices-network
     environment:
-      - MONGO_URI=mongodb://mongo:27017
-      - RABBIT_URI=amqp://guest:guest@rabbitmq/
+      - MONGO_URI=mongodb://mongodb:27017
+      # - RABBIT_URI=amqp://guest:guest@rabbitmq/
     ports:
       - "50051:50051"
 
@@ -25,6 +25,20 @@ services:
     ports:
       - "8000:8000"
 
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    networks:
+      - microservices-network
+    volumes:
+      - mongo-data:/data/db
+
 networks:
   microservices-network:
     driver: bridge
+
+volumes:
+  mongo-data:

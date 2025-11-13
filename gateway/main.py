@@ -1,15 +1,15 @@
 # gateway/main.py
 import grpc
+import os
 from models import CreateOrderRequest
 import orders_pb2, orders_pb2_grpc
 from fastapi import FastAPI, HTTPException
 
-import asyncio
 from google.protobuf.json_format import MessageToDict
 
 app = FastAPI(title="Gateway")
 
-GRPC_TARGET = "orders:50051"
+GRPC_TARGET = os.getenv("GRPC_TARGET", "orders:50051")
 
 # Reuse a single channel/stub
 _channel = None

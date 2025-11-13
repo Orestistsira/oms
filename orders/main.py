@@ -1,26 +1,28 @@
 # orders/main.py
 import asyncio
-import os
 import grpc
 from datetime import datetime, timezone
 
+from db_handler import DBHandler
+from menu import get_items_with_details
 import orders_pb2, orders_pb2_grpc
 
 from google.protobuf.timestamp_pb2 import Timestamp
-from google.protobuf.json_format import Parse, ParseDict
 import uuid
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
-RABBIT_URI = os.getenv("RABBIT_URI", "amqp://guest:guest@rabbitmq/")
-
 class OrdersServicer(orders_pb2_grpc.OrdersServicer):
+    def __init__(self):
+        self.db_handler = DBHandler()
+
     async def CreateOrder(self, request, context):
-        items = [{
-            "item_id": item.item_id,
-            "name": "name_placeholder",
-            "quantity": item.quantity,
-            "price": 10
-        } for item in request.items]
+        try:
+            items = get_items_with_details(request.items)
+        except Exception as e:
+            print(f"Database error: {e}")
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                f"Invalid items in order: {str(e)}"
+            )
 
         # Build order doc
         order_id = str(uuid.uuid4())
@@ -34,6 +36,15 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
             "created_at": datetime.now(timezone.utc)
         }
 
+        try:
+            await self.db_handler.create_order(doc)
+        except Exception as e:
+            print(f"Database error: {e}")
+            await context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Failed to create order: {str(e)}"
+            )
+
         ts = Timestamp()
         ts.FromDatetime(doc["created_at"])
         return orders_pb2.Order(
@@ -46,15 +57,7 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
         )
 
     async def GetOrder(self, request, context):
-        doc = {
-            "_id": request.order_id,
-            "order_id": request.order_id,
-            "customer_id": request.customer_id,
-            "items": [],
-            "status": "created",
-            "payment_link": "",
-            "created_at": datetime.now(timezone.utc)
-        }
+        doc = await self.db_handler.get_order(request.order_id, request.customer_id)
 
         if not doc:
             context.set_code(grpc.StatusCode.NOT_FOUND)
