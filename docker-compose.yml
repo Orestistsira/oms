@@ -9,9 +9,23 @@ services:
       - microservices-network
     environment:
       - MONGO_URI=mongodb://mongodb:27017
+      - STOCK_GRPC_TARGET=stock:2001
       # - RABBIT_URI=amqp://guest:guest@rabbitmq/
     ports:
-      - "50051:50051"
+      - "2000:2000"
+
+  stock:
+    container_name: stock
+    build:
+      context: .
+      dockerfile: stock/Dockerfile
+    networks:
+      - microservices-network
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      # - RABBIT_URI=amqp://guest:guest@rabbitmq/
+    ports:
+      - "2001:2001"
 
   gateway:
     container_name: gateway
@@ -21,7 +35,7 @@ services:
     networks:
       - microservices-network
     environment:
-      - GRPC_TARGET=orders:50051
+      - ORDERS_GRPC_TARGET=orders:2000
     ports:
       - "8000:8000"
 

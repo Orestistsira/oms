@@ -1,4 +1,3 @@
-# orders_service/repo.py
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
@@ -7,7 +6,7 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
 class DBHandler:
     def __init__(self):
         self.client = AsyncIOMotorClient(MONGO_URI)
-        self.db = self.client["ordersdb"]
+        self.db = self.client["omsdb"]
         self.col = self.db["orders"]
 
     async def create_order(self, doc: dict):

@@ -9,7 +9,7 @@ from google.protobuf.json_format import MessageToDict
 
 app = FastAPI(title="Gateway")
 
-GRPC_TARGET = os.getenv("GRPC_TARGET", "orders:50051")
+ORDERS_GRPC_TARGET = os.getenv("ORDERS_GRPC_TARGET", "orders:2000")
 
 # Reuse a single channel/stub
 _channel = None
@@ -18,7 +18,7 @@ _stub = None
 def get_stub():
     global _channel, _stub
     if _stub is None:
-        _channel = grpc.aio.insecure_channel(GRPC_TARGET)
+        _channel = grpc.aio.insecure_channel(ORDERS_GRPC_TARGET)
         _stub = orders_pb2_grpc.OrdersStub(_channel)
     return _stub
 
