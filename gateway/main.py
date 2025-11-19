@@ -1,9 +1,9 @@
 # gateway/main.py
 import grpc
 import os
-from models import CreateOrderRequest
+from models import CreateOrderRequest, Order
 import orders_pb2, orders_pb2_grpc
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 
 from google.protobuf.json_format import MessageToDict
 
@@ -22,7 +22,7 @@ def get_stub():
         _stub = orders_pb2_grpc.OrdersStub(_channel)
     return _stub
 
-@app.post("/api/customers/{customer_id}/orders")
+@app.post("/api/customers/{customer_id}/orders", response_model=Order, status_code=status.HTTP_201_CREATED)
 async def create_order(customer_id: str, order: CreateOrderRequest):
     items = [orders_pb2.ItemWithQuantity(item_id=item.item_id, quantity=item.quantity) for item in order.items]
 
@@ -30,11 +30,14 @@ async def create_order(customer_id: str, order: CreateOrderRequest):
     req = orders_pb2.CreateOrderRequest(customer_id=customer_id, items=items)
     try:
         resp = await stub.CreateOrder(req, timeout=5)
-        return MessageToDict(resp, preserving_proto_field_name=True)
+        dict_resp = MessageToDict(resp, preserving_proto_field_name=True)
+        print("CreateOrder response as dict:", dict_resp)
+        return Order(**dict_resp)
+        # return MessageToDict(resp, preserving_proto_field_name=True)
     except grpc.aio.AioRpcError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/customers/{customer_id}/orders/{order_id}")
+@app.get("/api/customers/{customer_id}/orders/{order_id}", response_model=Order, status_code=status.HTTP_200_OK)
 async def get_order(customer_id: str, order_id: str):
     stub = get_stub()
     req = orders_pb2.GetOrderRequest(customer_id=customer_id, order_id=order_id)
