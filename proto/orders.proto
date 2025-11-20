@@ -40,6 +40,7 @@ message Order {
 service Orders {
   rpc CreateOrder(CreateOrderRequest) returns (Order);
   rpc GetOrder(GetOrderRequest) returns (Order);
+  rpc UpdateOrder(Order) returns (Order);
 }
 
 // Stock Service

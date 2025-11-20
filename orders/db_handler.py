@@ -16,3 +16,10 @@ class DBHandler:
     async def get_order(self, order_id: str, customer_id: str):
         doc = await self.col.find_one({"_id": order_id, "customer_id": customer_id})
         return doc
+    
+    async def update_order(self, order_id: str, update_fields: dict):
+        result = await self.col.update_one(
+            {"_id": order_id},
+            {"$set": update_fields}
+        )
+        return result.modified_count

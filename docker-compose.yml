@@ -17,7 +17,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017
       - STOCK_GRPC_TARGET=stock:2001
-      # - RABBIT_URI=amqp://guest:guest@rabbitmq/
+      - RABBIT_URI=amqp://guest:guest@rabbitmq/
     ports:
       - "2000:2000"
 
@@ -66,7 +66,7 @@ services:
       - microservices-network
     environment:
       - ORDERS_GRPC_TARGET=orders:2000
-      # - RABBIT_URI=amqp://guest:guest@rabbitmq/
+      - RABBIT_URI=amqp://guest:guest@rabbitmq/
       # - PAYMENT_PORT=3000
     ports:
       - "8001:8001"

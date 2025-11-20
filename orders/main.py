@@ -72,7 +72,6 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
                 f"Failed to create order: {str(e)}"
             )
 
-        # TODO: Publish order created event to message broker
         await publish_order_created(order)
 
         ts = Timestamp()
@@ -111,8 +110,29 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
             payment_link=order.get("payment_link", ""),
             created_at=ts
         )
-    
-    # TODO: Add update order method (status, payment link, etc.)
+
+    async def UpdateOrder(self, request, context):
+        try:
+            modified_count = await self.db_handler.update_order(
+                request.order_id,
+                {
+                    "status": request.status,
+                    "payment_link": request.payment_link
+                }
+            )
+        except Exception as e:
+            print(f"Database error: {e}")
+            await context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Failed to update order: {str(e)}"
+            )
+
+        if modified_count == 0:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details("Order not found or no changes made")
+            return orders_pb2.Order()
+        
+        return orders_pb2.Order(request)
 
 async def serve():
     server = grpc.aio.server()

@@ -9,3 +9,6 @@ cp ./proto/orders_pb2_grpc.py ./gateway/
 
 cp ./proto/orders_pb2.py ./stock/
 cp ./proto/orders_pb2_grpc.py ./stock/
+
+cp ./proto/orders_pb2.py ./payment/
+cp ./proto/orders_pb2_grpc.py ./payment/

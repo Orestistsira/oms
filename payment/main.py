@@ -10,7 +10,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(consume_order_created())
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="Payment Service", lifespan=lifespan)
 
 @app.post("/payment/callback")
 async def payment_callback(order_id: str):
