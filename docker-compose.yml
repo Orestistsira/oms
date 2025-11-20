@@ -5,6 +5,13 @@ services:
     build:
       context: .
       dockerfile: orders/Dockerfile
+    depends_on:
+      mongodb:
+        condition: service_started
+      stock:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - microservices-network
     environment:
@@ -19,6 +26,9 @@ services:
     build:
       context: .
       dockerfile: stock/Dockerfile
+    depends_on:
+      mongodb:
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -32,12 +42,49 @@ services:
     build:
       context: .
       dockerfile: gateway/Dockerfile
+    depends_on:
+      orders:
+        condition: service_started
     networks:
       - microservices-network
     environment:
       - ORDERS_GRPC_TARGET=orders:2000
     ports:
       - "8000:8000"
+
+  payment:
+    container_name: payment
+    build:
+      context: .
+      dockerfile: payment/Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      orders:
+        condition: service_started
+    networks:
+      - microservices-network
+    environment:
+      - ORDERS_GRPC_TARGET=orders:2000
+      # - RABBIT_URI=amqp://guest:guest@rabbitmq/
+      # - PAYMENT_PORT=3000
+    ports:
+      - "8001:8001"
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - "5672:5672"      # AMQP
+      - "15672:15672"    # Management UI
+    networks:
+      - microservices-network
 
   mongodb:
     image: mongo:7

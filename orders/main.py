@@ -4,6 +4,7 @@ import asyncio
 import grpc
 from datetime import datetime, timezone
 
+from broker import publish_order_created
 from db_handler import DBHandler
 import orders_pb2, orders_pb2_grpc
 
@@ -71,6 +72,9 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
                 f"Failed to create order: {str(e)}"
             )
 
+        # TODO: Publish order created event to message broker
+        publish_order_created()
+
         ts = Timestamp()
         ts.FromDatetime(order["created_at"])
         return orders_pb2.Order(
@@ -107,6 +111,8 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
             payment_link=order.get("payment_link", ""),
             created_at=ts
         )
+    
+    # TODO: Add update order method (status, payment link, etc.)
 
 async def serve():
     server = grpc.aio.server()
