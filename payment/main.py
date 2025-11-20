@@ -7,7 +7,6 @@ import time
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start consumer
-    # time.sleep(10) # Wait for RabbitMQ server to start
     asyncio.create_task(consume_order_created())
     yield
 

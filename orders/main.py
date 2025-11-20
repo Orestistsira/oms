@@ -73,7 +73,7 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
             )
 
         # TODO: Publish order created event to message broker
-        publish_order_created()
+        await publish_order_created(order)
 
         ts = Timestamp()
         ts.FromDatetime(order["created_at"])

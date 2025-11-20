@@ -1,11 +1,21 @@
-def publish_order_created():
-    pass
-    # connection = pika.BlockingConnection(
-    # pika.ConnectionParameters(host='rabbitmq'))
-    # channel = connection.channel()
+import json
+from aio_pika import Message, connect, DeliveryMode
 
-    # channel.queue_declare(queue='hello')
+async def publish_order_created(order: dict):
+    # Perform connection
+    connection = await connect("amqp://guest:guest@rabbitmq/")
 
-    # channel.basic_publish(exchange='', routing_key='hello', body='Hello World!')
-    # print(" [x] Sent 'Hello World!'")
-    # connection.close()
+    async with connection:
+        # Creating a channel
+        channel = await connection.channel()
+
+        # Declaring queue
+        queue = await channel.declare_queue("hello")
+
+        # Sending the message
+        await channel.default_exchange.publish(
+            Message(body=json.dumps(order, default=str).encode(), content_type="application/json", delivery_mode=DeliveryMode.PERSISTENT),
+            routing_key=queue.name,
+        )
+
+        print(f" [x] Sent Order: {order}")
