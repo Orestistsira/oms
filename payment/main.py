@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from broker import consume_order_created, publish_order_paid
 import asyncio
-import time
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,7 +11,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Payment Service", lifespan=lifespan)
 
-@app.post("/payment/{order_id}/callback")
+@app.post("/payment/{order_id}/callback", response_model=dict, status_code=status.HTTP_200_OK)
 async def payment_callback(order_id: str):
-    await publish_order_paid(order_id)
-    return {"status": "ok"}
+    try:
+        await publish_order_paid(order_id)
+    except Exception as e:
+        return {"detail": f"error: {e}"}
+    return {"detail": "payment processed"}

@@ -2,12 +2,14 @@
 import asyncio
 import grpc
 
+from broker import Broker
 from db_handler import DBHandler
 import orders_pb2, orders_pb2_grpc
 
 class StockServicer(orders_pb2_grpc.StockServicer):
     def __init__(self):
         self.db_handler = DBHandler()
+        self.broker = Broker(self.db_handler)
 
     async def CheckIfItemsInStock(self, request, context):
         req_items = self._merge_items(request.items)
