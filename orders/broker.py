@@ -8,63 +8,67 @@ from db_handler import DBHandler
 
 RABBIT_URI = os.getenv("RABBIT_URI", "amqp://guest:guest@rabbitmq/")
 
-async def publish_order_created(order: dict):
-    # Perform connection
-    connection = await connect(RABBIT_URI)
+class Broker:
+    def __init__(self, db_handler: DBHandler):
+        self.db_handler = db_handler
+        asyncio.create_task(self.consume_order_paid())
 
-    async with connection:
-        # Creating a channel
-        channel = await connection.channel()
+    async def publish_order_created(self, order: dict):
+        # Perform connection
+        connection = await connect(RABBIT_URI)
 
-        # Declaring queue
-        queue = await channel.declare_queue("order.created")
+        async with connection:
+            # Creating a channel
+            channel = await connection.channel()
 
-        # Sending the message
-        await channel.default_exchange.publish(
-            Message(body=json.dumps(order, default=str).encode(), content_type="application/json", delivery_mode=DeliveryMode.PERSISTENT),
-            routing_key=queue.name,
-        )
+            # Declaring queue
+            queue = await channel.declare_queue("order.created")
 
-        print(f" [x] Sent Order: {order}")
-
-async def on_message(message: AbstractIncomingMessage) -> None:
-    async with message.process():
-        data = json.loads(message.body.decode())
-        print(f"[x] Received order.paid: {data}", flush=True)
-
-        db_handler = DBHandler()
-        try:
-            await db_handler.update_order(
-                data["order_id"],
-                {
-                    "status": "paid",
-                    "payment_link": ""
-                }
+            # Sending the message
+            await channel.default_exchange.publish(
+                Message(body=json.dumps(order, default=str).encode(), content_type="application/json", delivery_mode=DeliveryMode.PERSISTENT),
+                routing_key=queue.name,
             )
-        except Exception as e:
-            print(f"Database error: {e}")
 
-async def consume_order_paid():
-    # Perform connection
-    connection = await connect(RABBIT_URI)
+            print(f" [x] Sent Order: {order}")
 
-    async with connection:
-        # Creating a channel
-        channel = await connection.channel()
-        await channel.set_qos(prefetch_count=1)
+    async def on_message(self, message: AbstractIncomingMessage) -> None:
+        async with message.process():
+            data = json.loads(message.body.decode())
+            print(f"[x] Received order.paid: {data}", flush=True)
 
-        order_paid_exchange = await channel.declare_exchange(
-            "order.paid", ExchangeType.FANOUT,
-        )
+            try:
+                await self.db_handler.update_order(
+                    data["order_id"],
+                    {
+                        "status": "paid",
+                        "payment_link": ""
+                    }
+                )
+            except Exception as e:
+                print(f"Database error: {e}")
 
-        # Declaring queue
-        queue = await channel.declare_queue(exclusive=True)
+    async def consume_order_paid(self):
+        # Perform connection
+        connection = await connect(RABBIT_URI)
 
-        # Binding the queue to the exchange
-        await queue.bind(order_paid_exchange)
+        async with connection:
+            # Creating a channel
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=1)
 
-        # Start listening the queue
-        await queue.consume(on_message)
+            order_paid_exchange = await channel.declare_exchange(
+                "order.paid", ExchangeType.FANOUT,
+            )
 
-        print(" [*] Waiting for order paid events", flush=True)
-        await asyncio.Future()
+            # Declaring queue
+            queue = await channel.declare_queue(exclusive=True)
+
+            # Binding the queue to the exchange
+            await queue.bind(order_paid_exchange)
+
+            # Start listening the queue
+            await queue.consume(self.on_message)
+
+            print(" [*] Waiting for order paid events", flush=True)
+            await asyncio.Future()

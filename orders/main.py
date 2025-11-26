@@ -4,7 +4,7 @@ import asyncio
 import grpc
 from datetime import datetime, timezone
 
-from broker import publish_order_created, consume_order_paid
+from broker import Broker
 from db_handler import DBHandler
 import orders_pb2, orders_pb2_grpc
 
@@ -29,6 +29,7 @@ def get_stub():
 class OrdersServicer(orders_pb2_grpc.OrdersServicer):
     def __init__(self):
         self.db_handler = DBHandler()
+        self.broker = Broker(self.db_handler)
 
     async def CreateOrder(self, request, context):
         stub = get_stub()
@@ -36,7 +37,7 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
         try:
             resp = await stub.CheckIfItemsInStock(req, timeout=5)
             resp = MessageToDict(resp, preserving_proto_field_name=True)
-        except Exception as e:
+        except grpc.aio.AioRpcError as e:
             print(f"Stock service error: {e}")
             await context.abort(
                 grpc.StatusCode.INTERNAL,
@@ -72,7 +73,7 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
                 f"Failed to create order: {str(e)}"
             )
 
-        await publish_order_created(order)
+        await self.broker.publish_order_created(order)
 
         ts = Timestamp()
         ts.FromDatetime(order["created_at"])
@@ -132,11 +133,13 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
             context.set_details("Order not found or no changes made")
             return orders_pb2.Order()
         
-        return orders_pb2.Order(request)
+        return orders_pb2.Order(
+            order_id=request.order_id,
+            status=request.status,
+            payment_link=request.payment_link,
+        )
 
 async def serve():
-    asyncio.create_task(consume_order_paid())
-
     server = grpc.aio.server()
     orders_pb2_grpc.add_OrdersServicer_to_server(OrdersServicer(), server)
     listen_addr = "[::]:2000"

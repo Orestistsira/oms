@@ -35,7 +35,7 @@ async def on_order_created(message: AbstractIncomingMessage) -> None:
         resp = await stub.UpdateOrder(req, timeout=5)
         resp = MessageToDict(resp, preserving_proto_field_name=True)
         print(" [x] Updated order in order service:", resp, flush=True)
-    except Exception as e:
+    except grpc.aio.AioRpcError as e:
         print(f"Order service error: {e}")
 
 async def consume_order_created():
