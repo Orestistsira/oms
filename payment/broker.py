@@ -4,7 +4,7 @@ import os
 import grpc
 import orders_pb2_grpc, orders_pb2
 from google.protobuf.json_format import MessageToDict
-from aio_pika import connect
+from aio_pika import connect, ExchangeType, Message, DeliveryMode
 from aio_pika.abc import AbstractIncomingMessage
 
 ORDERS_GRPC_TARGET = os.getenv("ORDERS_GRPC_TARGET", "stock:2001")
@@ -51,5 +51,32 @@ async def consume_order_created():
         # Start listening the queue with name 'order.created'
         await queue.consume(on_order_created, no_ack=True)
 
-        print(" [*] Waiting for messages", flush=True)
+        print(" [*] Waiting for order created events.", flush=True)
         await asyncio.Future()
+
+async def publish_order_paid(order_id: str):
+    # Perform connection
+    connection = await connect(RABBIT_URI)
+
+    async with connection:
+        # Creating a channel
+        channel = await connection.channel()
+
+        order_paid_exchange = await channel.declare_exchange(
+            "order.paid", ExchangeType.FANOUT,
+        )
+
+        # Create JSON payload
+        payload = {"order_id": order_id}
+        message_body = json.dumps(payload).encode("utf-8")
+
+        message = Message(
+            message_body,
+            content_type="application/json",
+            delivery_mode=DeliveryMode.PERSISTENT,
+        )
+
+        # Sending the message
+        await order_paid_exchange.publish(message, routing_key="")
+
+        print(f" [x] Sent order paid event {payload}")

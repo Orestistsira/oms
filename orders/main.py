@@ -4,7 +4,7 @@ import asyncio
 import grpc
 from datetime import datetime, timezone
 
-from broker import publish_order_created
+from broker import publish_order_created, consume_order_paid
 from db_handler import DBHandler
 import orders_pb2, orders_pb2_grpc
 
@@ -135,6 +135,8 @@ class OrdersServicer(orders_pb2_grpc.OrdersServicer):
         return orders_pb2.Order(request)
 
 async def serve():
+    asyncio.create_task(consume_order_paid())
+
     server = grpc.aio.server()
     orders_pb2_grpc.add_OrdersServicer_to_server(OrdersServicer(), server)
     listen_addr = "[::]:2000"

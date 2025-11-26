@@ -1,0 +1,8 @@
+venv
+.venv
+artifacts
+data
+__pycache__
+*.pth
+.git
+.gitignore
